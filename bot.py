@@ -78,7 +78,7 @@ async def ping(ctx):
 @bot.command()
 async def itad(ctx):
     print_out(ctx)
-    await ctx.send(embed=itad_embed(ctx, isthereanydeal.bundles_specials()))
+    await ctx.send(embed=itad_embed(isthereanydeal.bundles_specials()))
 
 
 def itad_embed(lis):
