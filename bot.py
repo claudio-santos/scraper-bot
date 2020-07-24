@@ -1,8 +1,9 @@
 import os
+import typing
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
-import typing
+import asyncio
 import isthereanydeal
 import wallhaven
 
@@ -22,9 +23,9 @@ cmdlist = (
     ('.wh top [amount] [query]', 'Gets top wallpaper(s)', True)
 )
 
-errorlist = (
-
-)
+database = 'database.db'
+check_new_bundles_specials_db_delay = 21600
+bot_change_presence_delay = 60
 
 load_dotenv()
 
@@ -77,24 +78,27 @@ async def ping(ctx):
 @bot.command()
 async def itad(ctx):
     print_out(ctx)
-    dic = isthereanydeal.bundles_specials()
+    await ctx.send(embed=itad_embed(ctx, isthereanydeal.bundles_specials()))
+
+
+def itad_embed(lis):
     embed = discord.Embed(
         title='Bundles and Special Deals',
         url=isthereanydeal.home_url
     )
 
-    for i in range(len(dic['title'])):
+    for li in lis:
         embed.add_field(
-            name=dic['title'][i],
+            name=li[0],
             value='{}\n{} ({}) [details]({})'.format(
-                dic['title_url'][i],
-                dic['time'][i],
-                dic['shop'][i],
-                dic['details_url'][i]),
+                li[1],
+                li[4],
+                li[3],
+                li[2]),
             inline=False
         )
 
-    await ctx.send(embed=embed)
+    return embed
 
 
 @itad.error
@@ -152,8 +156,33 @@ async def wp_error(ctx, error):
     await ctx.send(error)
 
 
+# todo change env variable to a saved channel id in database
+async def check_new_bundles_specials_db(db, delay):
+    await bot.wait_until_ready()
+    print('Starting check_new_bundles_specials_db')
+
+    while not bot.is_closed():
+        print('Running check_new_bundles_specials_db')
+        lis = isthereanydeal.check_new_bundles_specials_db(database)
+        if lis:
+            await bot.get_channel(int(os.getenv('CHANNEL_ITAD'))).send(embed=itad_embed(lis))
+        await asyncio.sleep(delay)
+
+
+async def bot_change_presence(delay):
+    await bot.wait_until_ready()
+    print('Starting bot_change_presence')
+
+    while not bot.is_closed():
+        print('Running bot_change_presence')
+        await bot.change_presence(activity=discord.Game('on {} server'.format(len(bot.guilds))))
+        await asyncio.sleep(delay)
+
+
 def print_out(ctx):
     print('[{0.message.created_at}] {0.author}: {0.message.content}'.format(ctx))
 
 
+bot.loop.create_task(check_new_bundles_specials_db(database, check_new_bundles_specials_db_delay))
+bot.loop.create_task(bot_change_presence(bot_change_presence_delay))
 bot.run(os.getenv('DISCORD_TOKEN'))

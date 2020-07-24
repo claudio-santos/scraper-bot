@@ -1,7 +1,9 @@
 from bs4 import BeautifulSoup
 import requests
+import sqlite3
 
 home_url = 'https://isthereanydeal.com/'
+notification = 'isthereanydeal'
 
 
 def bundles_specials():
@@ -10,15 +12,14 @@ def bundles_specials():
         return
 
     print(req.url)
-    soup = BeautifulSoup(req.content, 'html.parser')
+    soup = BeautifulSoup(req.text, 'html.parser')
 
     dic = {
-        'time': [],
-        'details_url': [],
         'title': [],
         'title_url': [],
+        'details_url': [],
         'shop': [],
-        'desc': []
+        'time': [],
     }
 
     for head in soup.find('div', 'cntBoxContent').find_all('div', 'bundle-head'):
@@ -36,4 +37,102 @@ def bundles_specials():
             aux = title.find('span', 'shopTitle')
             dic['shop'].append(aux.text if aux else '')
 
-    return dic
+    return __dic_to_lis__(dic)
+
+
+def check_new_bundles_specials_db(database):
+    res = []
+
+    lis = bundles_specials()
+
+    try:
+        conn = sqlite3.connect(database)
+        c = conn.cursor()
+
+        old = 0
+        for li in lis:
+            c.execute(
+                'INSERT OR IGNORE INTO isthereanydeal '
+                '( title '
+                ', title_url '
+                ', details_url '
+                ', shop '
+                ', time '
+                ') VALUES (?, ?, ?, ?, ?) '
+                , li
+            )
+            new = c.lastrowid
+            if new != old:
+                old = new
+                res += (li,)
+        conn.commit()
+
+        c.close()
+        conn.close()
+    except:
+        print('Exception in check_new_bundles_specials_db')
+
+    return res
+
+
+# todo
+def select_notification_channel(database, server):
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+
+    rows = c.execute('SELECT * FROM notifications').fetchall()
+
+    c.close()
+    conn.close()
+
+    return rows
+
+
+# todo
+def insert_notification_channel(database, channel, server):
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+
+    c.execute(
+        'INSERT OR IGNORE INTO notifications '
+        '( channel '
+        ', server '
+        ', type '
+        ') VALUES (?, ?, ?) '
+        , channel, server, notification
+    )
+    conn.commit()
+
+    c.close()
+    conn.close()
+
+
+# todo
+def delete_notification_channel_db(database, channel, server):
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+
+    c.execute(
+        'DELETE FROM notifications '
+        'WHERE channel = ? '
+        'AND server = ? '
+        'AND type = ? '
+        , channel, server, notification
+    )
+    conn.commit()
+
+    c.close()
+    conn.close()
+
+
+def __dic_to_lis__(dic):
+    lis = []
+    for i in range(len(dic['title'])):
+        lis += ((
+                    dic['title'][i],
+                    dic['title_url'][i],
+                    dic['details_url'][i],
+                    dic['shop'][i],
+                    dic['time'][i],
+                ),)
+    return lis
