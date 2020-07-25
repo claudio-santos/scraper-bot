@@ -14,7 +14,7 @@ cmdlist = (
     ('.clear [amount]', 'Owner only: Clears newest channel messages', False),
     ('-', isthereanydeal.home_url, False),
     ('.itad', 'Shows bundles and special deals', True),
-    ('.itad giveaways', 'Shows giveaways', True),
+    ('.itad giveaway', 'Shows giveaways', True),
     ('-', howlongtobeat.home_url, False),
     ('.hltb [game]', 'Gives game completion times', False),
     ('-', wallhaven.home_url, False),
