@@ -20,7 +20,7 @@ def bundles_specials():
         'title_url': [],
         'details_url': [],
         'shop': [],
-        'time': [],
+        'time': []
     }
 
     for head in soup.find_all('div', 'bundle-head'):
@@ -57,7 +57,7 @@ def specials(filter_type):
         'title_url': [],
         'details_url': [],
         'shop': [],
-        'time': [],
+        'time': []
     }
 
     for row in soup.find_all('div', 'bundle-row1'):
@@ -174,6 +174,6 @@ def __dic_to_lis__(dic):
                     dic['title_url'][i],
                     dic['details_url'][i],
                     dic['shop'][i],
-                    dic['time'][i],
+                    dic['time'][i]
                 ),)
     return lis

@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 import asyncio
 import isthereanydeal
+import howlongtobeat
 import wallhaven
 
 cmdlist = (
@@ -14,6 +15,8 @@ cmdlist = (
     ('-', isthereanydeal.home_url, False),
     ('.itad', 'Shows bundles and special deals', True),
     ('.itad giveaways', 'Shows giveaways', True),
+    ('-', howlongtobeat.home_url, False),
+    ('.hltb [game]', 'Gives game completion times', False),
     ('-', wallhaven.home_url, False),
     ('.wh', 'Gets featured wallpapers', False),
     ('.wh relevant [amount] [query]', 'Gets relevant wallpaper(s)', True),
@@ -24,9 +27,11 @@ cmdlist = (
     ('.wh top [amount] [query]', 'Gets top wallpaper(s)', True)
 )
 
+error_command_unknown = "I couldn't understand the command."
+
 database = 'database.db'
 check_new_bundles_specials_db_delay = 21600
-bot_change_presence_delay = 60
+bot_change_presence_delay = 600
 
 load_dotenv()
 
@@ -87,7 +92,7 @@ async def itad(ctx, command: typing.Optional[str]):
         await ctx.send(embed=itad_embed_compact(isthereanydeal.specials('giveaway'), 'Giveaways'))
 
     else:
-        await ctx.send("I couldn't understand your command.")
+        await ctx.send(error_command_unknown)
 
 
 def itad_embed(lis):
@@ -128,6 +133,31 @@ async def itad_error(ctx, error):
 
 
 @bot.command()
+async def hltb(ctx, *, game):
+    print_out(ctx)
+
+    dic = howlongtobeat.search_game(game)
+
+    embed = discord.Embed(
+        title=dic['title'],
+        url=dic['url']
+    ).set_thumbnail(
+        url=dic['img_url']
+    )
+
+    labels = dic['labels']
+    times = dic['times']
+    for i in range(len(labels)):
+        embed.add_field(
+            name=labels[i],
+            value=times[i] if len(times) > i else '-',
+            inline=True
+        )
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
 async def wh(ctx, command: typing.Optional[str], amount: typing.Optional[int] = 1, *, query: typing.Optional[str]):
     print_out(ctx)
 
@@ -160,7 +190,7 @@ async def wh(ctx, command: typing.Optional[str], amount: typing.Optional[int] = 
             await ctx.send(embed=wh_embed(img))
 
     else:
-        await ctx.send("I couldn't understand your command.")
+        await ctx.send(error_command_unknown)
 
 
 def wh_embed(img):
