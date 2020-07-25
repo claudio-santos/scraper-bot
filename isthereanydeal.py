@@ -3,6 +3,7 @@ import requests
 import sqlite3
 
 home_url = 'https://isthereanydeal.com/'
+specials_url = 'https://isthereanydeal.com/specials/#/'
 notification = 'isthereanydeal'
 
 
@@ -22,20 +23,60 @@ def bundles_specials():
         'time': [],
     }
 
-    for head in soup.find('div', 'cntBoxContent').find_all('div', 'bundle-head'):
+    for head in soup.find_all('div', 'bundle-head'):
+        time = head.find('div', 'bundle-time')
+        dic['time'].append(time.text)
 
-        for time in head.find_all('div', 'bundle-time'):
-            dic['time'].append(time.text)
+        details = head.find('a', 'bundle-tag')
+        dic['details_url'].append(home_url[:-1] + details['href'])
 
-        for details in head.find_all('a', 'more'):
-            dic['details_url'].append(home_url[:-1] + details['href'])
+        title = head.find('div', 'bundle-title')
 
-        for title in head.find_all('div', 'bundle-title'):
-            aux = title.find('a', 'lg')
-            dic['title'].append(aux.text)
-            dic['title_url'].append(aux['href'])
-            aux = title.find('span', 'shopTitle')
-            dic['shop'].append(aux.text if aux else '')
+        aux = title.find('a', 'lg')
+        dic['title'].append(aux.text)
+        dic['title_url'].append(aux['href'])
+
+        shop = title.find('span', 'shopTitle')
+        dic['shop'].append(shop.text if shop else '')
+
+    return __dic_to_lis__(dic)
+
+
+# filter can be giveaway, other, bundle
+# todo wait for all rows to load
+def specials(filter_type):
+    req = requests.get(specials_url)
+    if req.status_code != 200:
+        return
+
+    print(req.url)
+    soup = BeautifulSoup(req.text, 'html.parser')
+
+    dic = {
+        'title': [],
+        'title_url': [],
+        'details_url': [],
+        'shop': [],
+        'time': [],
+    }
+
+    for row in soup.find_all('div', 'bundle-row1'):
+        details = row.find('a', 'bundle-tag')
+        if details.text != filter_type:
+            continue
+
+        dic['details_url'].append(home_url[:-1] + details['href'])
+
+        time = row.find('div', 'bundle-time')
+        dic['time'].append(time.text)
+
+        title = row.find('div', 'bundle-title')
+
+        aux = title.find('a', 'lg')
+        dic['title'].append(aux.text)
+        dic['title_url'].append(aux['href'])
+
+        dic['shop'].append('')
 
     return __dic_to_lis__(dic)
 

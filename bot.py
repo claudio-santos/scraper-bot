@@ -12,9 +12,10 @@ cmdlist = (
     ('.ping', 'Shows bot latency', False),
     ('.clear [amount]', 'Owner only: Clears newest channel messages', False),
     ('-', isthereanydeal.home_url, False),
-    ('.itad', 'Shows bundles and special deals from isthereanydeal', False),
+    ('.itad', 'Shows bundles and special deals', True),
+    ('.itad giveaways', 'Shows giveaways', True),
     ('-', wallhaven.home_url, False),
-    ('.wh', 'Gets featured wallpapers from wallhaven', False),
+    ('.wh', 'Gets featured wallpapers', False),
     ('.wh relevant [amount] [query]', 'Gets relevant wallpaper(s)', True),
     ('.wh random [amount] [query]', 'Gets random wallpaper(s)', True),
     ('.wh latest [amount] [query]', 'Gets latest wallpaper(s)', True),
@@ -76,9 +77,17 @@ async def ping(ctx):
 
 
 @bot.command()
-async def itad(ctx):
+async def itad(ctx, command: typing.Optional[str]):
     print_out(ctx)
-    await ctx.send(embed=itad_embed(isthereanydeal.bundles_specials()))
+
+    if not command:
+        await ctx.send(embed=itad_embed(isthereanydeal.bundles_specials()))
+
+    elif command == 'giveaway':
+        await ctx.send(embed=itad_embed_compact(isthereanydeal.specials('giveaway'), 'Giveaways'))
+
+    else:
+        await ctx.send("I couldn't understand your command.")
 
 
 def itad_embed(lis):
@@ -90,12 +99,24 @@ def itad_embed(lis):
     for li in lis:
         embed.add_field(
             name=li[0],
-            value='{}\n{} ({}) [details]({})'.format(
-                li[1],
-                li[4],
-                li[3],
-                li[2]),
+            value='{}\n{} ({}) [details]({})'.format(li[1], li[4], li[3], li[2]),
             inline=False
+        )
+
+    return embed
+
+
+def itad_embed_compact(lis, command):
+    embed = discord.Embed(
+        title='Specials {}'.format(command),
+        url=isthereanydeal.specials_url
+    )
+
+    for li in lis:
+        embed.add_field(
+            name=li[0],
+            value='{}\n{} [details]({})'.format(li[1], li[4], li[2]),
+            inline=True
         )
 
     return embed
@@ -139,7 +160,7 @@ async def wh(ctx, command: typing.Optional[str], amount: typing.Optional[int] = 
             await ctx.send(embed=wh_embed(img))
 
     else:
-        await ctx.send("Unknown")
+        await ctx.send("I couldn't understand your command.")
 
 
 def wh_embed(img):
