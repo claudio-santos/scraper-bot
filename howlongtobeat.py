@@ -44,5 +44,3 @@ def search_game(game):
         'labels': labels,
         'times': times
     }
-
-print(search_game('metal gear'))
