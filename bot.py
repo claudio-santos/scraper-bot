@@ -3,6 +3,7 @@ import typing
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
+from discord.ext import tasks
 import asyncio
 import isthereanydeal
 import howlongtobeat
