@@ -17,6 +17,7 @@ cmdlist = (
     ('-', isthereanydeal.home_url, False),
     ('.itad', 'Shows bundles and special deals', True),
     ('.itad giveaway', 'Shows giveaways', True),
+    ('.itad [game]', 'Shows game information and deals', True),
     ('-', howlongtobeat.home_url, False),
     ('.hltb [game]', 'Gives game completion times', False),
     ('-', wallhaven.home_url, False),
@@ -35,10 +36,9 @@ error_command_unknown = "I couldn't understand the command."
 
 discord_token = os.getenv('DISCORD_TOKEN')
 nasa_api_key = os.getenv('NASA_API_KEY')
-channel_itad = os.getenv('CHANNEL_ITAD')
+itad_api_key = os.getenv('ITAD_API_KEY')
+itad_region = os.getenv('ITAD_REGION')
 
-database = 'database.db'
-check_new_bundles_specials_db_delay = 21600
 bot_change_presence_delay = 600
 
 bot = commands.Bot(command_prefix='.', case_insensitive=True)
@@ -67,7 +67,7 @@ async def help(ctx):
 
 @bot.command()
 @commands.is_owner()
-async def clear(ctx, amount: typing.Optional[int] = 100):
+async def clear(ctx, amount: typing.Optional[int] = 2):
     print_out(ctx)
     await ctx.channel.purge(limit=amount)
 
@@ -96,15 +96,22 @@ async def ping(ctx):
 
 
 @bot.command()
-async def itad(ctx, command: typing.Optional[str]):
+async def itad(ctx, *, command: typing.Optional[str]):
     print_out(ctx)
 
     if not command:
         await ctx.send(embed=itad_embed(isthereanydeal.bundles_specials()))
 
     elif command.lower() == 'giveaway':
-        await ctx.send(embed=itad_embed_compact(isthereanydeal.specials('giveaway'), 'Giveaways'))
+        await ctx.send(embed=itad_embed_giveaway(isthereanydeal.specials('giveaway'), 'Giveaways'))
 
+    elif command:
+        dic = isthereanydeal.search_game(itad_api_key, command, itad_region)
+        if not type(dic) is dict:
+            for x in dic:
+                await ctx.send('.itad {}'.format(x['title']))
+        else:
+            await ctx.send(embed=itad_embed_search(dic))
     else:
         await ctx.send(error_command_unknown)
 
@@ -125,7 +132,7 @@ def itad_embed(lis):
     return embed
 
 
-def itad_embed_compact(lis, command):
+def itad_embed_giveaway(lis, command):
     embed = discord.Embed(
         title='Specials {}'.format(command),
         url=isthereanydeal.specials_url
@@ -135,6 +142,33 @@ def itad_embed_compact(lis, command):
         embed.add_field(
             name=li[0],
             value='{}\n{} [details]({})'.format(li[1], li[4], li[2]),
+            inline=True
+        )
+
+    return embed
+
+
+def itad_embed_search(dic):
+    embed = discord.Embed(
+        title=dic['title'],
+        url=dic['url_game']
+    )
+
+    embed.add_field(name='-', value='__Current Prices__', inline=False)
+
+    for x in dic['prices_list']:
+        embed.add_field(
+            name=x['shop']['name'],
+            value='{:.2f} {} ({}% off)\n{}'.format(x['price_new'], dic['currency'], x['price_cut'], x['url']),
+            inline=True
+        )
+
+    embed.add_field(name='-', value='__Historical Low Prices__', inline=False)
+
+    for x in dic['storelow_list']:
+        embed.add_field(
+            name=x['shop'],
+            value='{:.2f} {}'.format(x['price'], dic['currency']),
             inline=True
         )
 
@@ -245,19 +279,6 @@ async def nasa_error(ctx, error):
     await ctx.send(error)
 
 
-# todo change env variable to a saved channel id in database
-async def check_new_bundles_specials_db(db, delay):
-    await bot.wait_until_ready()
-    print('Starting check_new_bundles_specials_db')
-
-    while not bot.is_closed():
-        print('Running check_new_bundles_specials_db')
-        lis = isthereanydeal.check_new_bundles_specials_db(db)
-        if lis:
-            await bot.get_channel(int(channel_itad)).send(embed=itad_embed(lis))
-        await asyncio.sleep(delay)
-
-
 async def bot_change_presence(delay):
     await bot.wait_until_ready()
     print('Starting bot_change_presence')
@@ -274,6 +295,5 @@ def print_out(ctx):
     print('[{0.message.created_at}] {0.author}: {0.message.content}'.format(ctx))
 
 
-bot.loop.create_task(check_new_bundles_specials_db(database, check_new_bundles_specials_db_delay))
 bot.loop.create_task(bot_change_presence(bot_change_presence_delay))
 bot.run(discord_token)

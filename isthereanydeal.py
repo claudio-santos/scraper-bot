@@ -1,10 +1,10 @@
 from bs4 import BeautifulSoup
 import requests
-import sqlite3
+import json
 
 home_url = 'https://isthereanydeal.com/'
 specials_url = 'https://isthereanydeal.com/specials/#/'
-notification = 'isthereanydeal'
+api_url = 'https://itad.docs.apiary.io/#'
 
 
 def bundles_specials():
@@ -81,89 +81,50 @@ def specials(filter_type):
     return __dic_to_lis__(dic)
 
 
-def check_new_bundles_specials_db(database):
-    res = []
+def search_game(api_key, game, region):
+    req = requests.get('https://api.isthereanydeal.com/v02/game/plain/?key={}&title={}'.format(api_key, game))
+    if req.status_code != 200:
+        return
 
-    lis = bundles_specials()
+    j = json.loads(req.text)
+    if not j['.meta']['active']:
+        req_url = [
+            'https://api.isthereanydeal.com/v01/search/search/',
+            '?key={}'.format(api_key),
+            '&q={}'.format(game),
+            '&limit=5',
+            '&region=eu2',
+            '&shops=battlenet%2Cepic%2Cgog%2Cmicrosoft%2Corigin%2Csteam%2Cuplay'
+        ]
+        req_url = ''.join(req_url)
+        req = requests.get(req_url)
+        return json.loads(req.text)['data']['list']
 
-    try:
-        conn = sqlite3.connect(database)
-        c = conn.cursor()
+    plain = j['data']['plain']
 
-        old = 0
-        for li in lis:
-            c.execute(
-                'INSERT OR IGNORE INTO isthereanydeal '
-                '( title '
-                ', title_url '
-                ', details_url '
-                ', shop '
-                ', time '
-                ') VALUES (?, ?, ?, ?, ?) '
-                , li
-            )
-            new = c.lastrowid
-            if new != old:
-                old = new
-                res += (li,)
-        conn.commit()
+    req = requests.get('https://api.isthereanydeal.com/v01/game/info/?key={}&plains={}'.format(api_key, plain))
+    j1 = json.loads(req.text)['data'][plain]
 
-        c.close()
-        conn.close()
-    except:
-        print('Exception in check_new_bundles_specials_db')
+    req = requests.get(
+        'https://api.isthereanydeal.com/v01/game/prices/?key={}&plains={}&region={}'.format(api_key, plain, region))
+    j = json.loads(req.text)
+    c = j['.meta']['currency']
+    j2 = j['data'][plain]
 
-    return res
+    req = requests.get(
+        'https://api.isthereanydeal.com/v01/game/storelow/?key={}&plains={}&region={}'.format(api_key, plain, region))
+    j3 = json.loads(req.text)['data'][plain]
 
-
-# todo
-def select_notification_channel(database, server):
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-
-    rows = c.execute('SELECT * FROM notifications').fetchall()
-
-    c.close()
-    conn.close()
-
-    return rows
-
-
-# todo
-def insert_notification_channel(database, channel, server):
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-
-    c.execute(
-        'INSERT OR IGNORE INTO notifications '
-        '( channel '
-        ', server '
-        ', type '
-        ') VALUES (?, ?, ?) '
-        , channel, server, notification
-    )
-    conn.commit()
-
-    c.close()
-    conn.close()
-
-
-# todo
-def delete_notification_channel_db(database, channel, server):
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-
-    c.execute(
-        'DELETE FROM notifications '
-        'WHERE channel = ? '
-        'AND server = ? '
-        'AND type = ? '
-        , channel, server, notification
-    )
-    conn.commit()
-
-    c.close()
-    conn.close()
+    return {
+        'title': j1['title'],
+        'is_dlc': j1['is_dlc'],
+        'achievements': j1['achievements'],
+        'trading_cards': j1['trading_cards'],
+        'url_game': j1['urls']['game'],
+        'currency': c,
+        'prices_list': j2['list'],
+        'storelow_list': j3
+    }
 
 
 def __dic_to_lis__(dic):
