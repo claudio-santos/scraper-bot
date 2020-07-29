@@ -2,7 +2,8 @@ import os
 import typing
 from dotenv import load_dotenv
 import discord
-from discord.ext import tasks, commands
+from discord.ext import commands
+import asyncio
 import isthereanydeal
 import howlongtobeat
 import wallhaven
@@ -28,8 +29,8 @@ cmdlist = (
 error_command_unknown = "I couldn't understand the command."
 
 database = 'database.db'
-check_new_bundles_specials_db_hours = 6
-bot_change_presence_minutes = 10
+check_new_bundles_specials_db_delay = 21600
+bot_change_presence_delay = 600
 
 load_dotenv()
 
@@ -214,24 +215,34 @@ async def wp_error(ctx, error):
 
 
 # todo change env variable to a saved channel id in database
-@tasks.loop(hours=check_new_bundles_specials_db_hours)
-async def check_new_bundles_specials_db():
-    print('Running check_new_bundles_specials_db')
-    lis = isthereanydeal.check_new_bundles_specials_db(database)
-    if lis:
-        await bot.get_channel(int(os.getenv('CHANNEL_ITAD'))).send(embed=itad_embed(lis))
+async def check_new_bundles_specials_db(db, delay):
+    await bot.wait_until_ready()
+    print('Starting check_new_bundles_specials_db')
+
+    while not bot.is_closed():
+        print('Running check_new_bundles_specials_db')
+        lis = isthereanydeal.check_new_bundles_specials_db(database)
+        if lis:
+            await bot.get_channel(int(os.getenv('CHANNEL_ITAD'))).send(embed=itad_embed(lis))
+        await asyncio.sleep(delay)
 
 
-@tasks.loop(minutes=bot_change_presence_minutes)
-async def bot_change_presence():
-    print('Running bot_change_presence')
-    len = len(bot.guilds)
-    msg = 'servers' if len > 1 else 'server'
-    await bot.change_presence(activity=discord.Game('on {} {}'.format(len, msg)))
+async def bot_change_presence(delay):
+    await bot.wait_until_ready()
+    print('Starting bot_change_presence')
+
+    while not bot.is_closed():
+        print('Running bot_change_presence')
+        len = len(bot.guilds)
+        msg = 'servers' if len > 1 else 'server'
+        await bot.change_presence(activity=discord.Game('on {} {}'.format(len, msg)))
+        await asyncio.sleep(delay)
 
 
 def print_out(ctx):
     print('[{0.message.created_at}] {0.author}: {0.message.content}'.format(ctx))
 
 
+bot.loop.create_task(check_new_bundles_specials_db(database, check_new_bundles_specials_db_delay))
+bot.loop.create_task(bot_change_presence(bot_change_presence_delay))
 bot.run(os.getenv('DISCORD_TOKEN'))
