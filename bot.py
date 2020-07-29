@@ -7,9 +7,12 @@ import asyncio
 import isthereanydeal
 import howlongtobeat
 import wallhaven
+import nasa as nasa_py
+
+load_dotenv()
 
 cmdlist = (
-    ('.help', 'Shows this message, optional parameters [amount] [query]', False),
+    ('.help', 'Shows this message, optional parameters [amount] [query] [date]', False),
     ('.ping', 'Shows bot latency', False),
     ('-', isthereanydeal.home_url, False),
     ('.itad', 'Shows bundles and special deals', True),
@@ -23,16 +26,20 @@ cmdlist = (
     ('.wh l [amount] [query]', 'Gets __l__atest wallpaper(s)', True),
     ('.wh v [amount] [query]', 'Gets most __v__iewed wallpaper(s)', True),
     ('.wh f [amount] [query]', 'Gets most __f__avored wallpaper(s)', True),
-    ('.wh t [amount] [query]', 'Gets __t__op wallpaper(s)', True)
+    ('.wh t [amount] [query]', 'Gets __t__op wallpaper(s)', True),
+    ('-', nasa_py.home_url, False),
+    ('.nasa [date]', '(date as YYYY-MM-DD) Gets Astronomy Picture of the Day from NASA', False)
 )
 
 error_command_unknown = "I couldn't understand the command."
 
+discord_token = os.getenv('DISCORD_TOKEN')
+nasa_api_key = os.getenv('NASA_API_KEY')
+channel_itad = os.getenv('CHANNEL_ITAD')
+
 database = 'database.db'
 check_new_bundles_specials_db_delay = 21600
 bot_change_presence_delay = 600
-
-load_dotenv()
 
 bot = commands.Bot(command_prefix='.', case_insensitive=True)
 bot.remove_command('help')
@@ -214,6 +221,30 @@ async def wp_error(ctx, error):
     await ctx.send(error)
 
 
+@bot.command()
+async def nasa(ctx, *, date: typing.Optional[str]):
+    print_out(ctx)
+    j = nasa_py.get_apod(nasa_api_key, date)
+    await ctx.send(embed=get_nasa_apod_embed(j))
+
+
+def get_nasa_apod_embed(j):
+    return discord.Embed(
+        title=j['title'],
+        description=j['explanation'],
+        url=j['url']
+    ).set_image(
+        url=j['hdurl']
+    ).set_footer(
+        text='{} | {}'.format(j['date'], j['copyright'])
+    )
+
+
+@nasa.error
+async def nasa_error(ctx, error):
+    await ctx.send(error)
+
+
 # todo change env variable to a saved channel id in database
 async def check_new_bundles_specials_db(db, delay):
     await bot.wait_until_ready()
@@ -221,9 +252,9 @@ async def check_new_bundles_specials_db(db, delay):
 
     while not bot.is_closed():
         print('Running check_new_bundles_specials_db')
-        lis = isthereanydeal.check_new_bundles_specials_db(database)
+        lis = isthereanydeal.check_new_bundles_specials_db(db)
         if lis:
-            await bot.get_channel(int(os.getenv('CHANNEL_ITAD'))).send(embed=itad_embed(lis))
+            await bot.get_channel(int(channel_itad)).send(embed=itad_embed(lis))
         await asyncio.sleep(delay)
 
 
@@ -233,9 +264,9 @@ async def bot_change_presence(delay):
 
     while not bot.is_closed():
         print('Running bot_change_presence')
-        len = len(bot.guilds)
-        msg = 'servers' if len > 1 else 'server'
-        await bot.change_presence(activity=discord.Game('on {} {}'.format(len, msg)))
+        size = len(bot.guilds)
+        msg = 'servers' if size > 1 else 'server'
+        await bot.change_presence(activity=discord.Game('on {} {}'.format(size, msg)))
         await asyncio.sleep(delay)
 
 
@@ -245,4 +276,4 @@ def print_out(ctx):
 
 bot.loop.create_task(check_new_bundles_specials_db(database, check_new_bundles_specials_db_delay))
 bot.loop.create_task(bot_change_presence(bot_change_presence_delay))
-bot.run(os.getenv('DISCORD_TOKEN'))
+bot.run(discord_token)
