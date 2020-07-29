@@ -18,23 +18,23 @@ cmdlist = (
     ('.hltb [game]', 'Gives game completion times', False),
     ('-', wallhaven.home_url, False),
     ('.wh', 'Gets featured wallpapers', False),
-    ('.wh relevant [amount] [query]', 'Gets relevant wallpaper(s)', True),
-    ('.wh random [amount] [query]', 'Gets random wallpaper(s)', True),
-    ('.wh latest [amount] [query]', 'Gets latest wallpaper(s)', True),
-    ('.wh views [amount] [query]', 'Gets most viewed wallpaper(s)', True),
-    ('.wh favorites [amount] [query]', 'Gets most favored wallpaper(s)', True),
-    ('.wh top [amount] [query]', 'Gets top wallpaper(s)', True)
+    ('.wh p [amount] [query]', 'Gets __p__ertinent wallpaper(s)', True),
+    ('.wh r [amount] [query]', 'Gets __r__andom wallpaper(s)', True),
+    ('.wh l [amount] [query]', 'Gets __l__atest wallpaper(s)', True),
+    ('.wh v [amount] [query]', 'Gets most __v__iewed wallpaper(s)', True),
+    ('.wh f [amount] [query]', 'Gets most __f__avored wallpaper(s)', True),
+    ('.wh t [amount] [query]', 'Gets __t__op wallpaper(s)', True)
 )
 
 error_command_unknown = "I couldn't understand the command."
 
 database = 'database.db'
-check_new_bundles_specials_db_delay = 21600
-bot_change_presence_delay = 600
+check_new_bundles_specials_db_hours = 6
+bot_change_presence_minutes = 10
 
 load_dotenv()
 
-bot = commands.Bot(command_prefix='.')
+bot = commands.Bot(command_prefix='.', case_insensitive=True)
 bot.remove_command('help')
 
 
@@ -68,9 +68,9 @@ async def clear(ctx, amount: typing.Optional[int] = 100):
 @bot.command()
 @commands.is_owner()
 async def logout(ctx):
-    print_out(ctx)
-    await ctx.send("I'll be back.")
-    await bot.logout()
+    print_out(ctx)
+    await ctx.send("I'll be back.")
+    await bot.logout()
 
 
 @bot.command()
@@ -95,7 +95,7 @@ async def itad(ctx, command: typing.Optional[str]):
     if not command:
         await ctx.send(embed=itad_embed(isthereanydeal.bundles_specials()))
 
-    elif command == 'giveaway':
+    elif command.lower() == 'giveaway':
         await ctx.send(embed=itad_embed_compact(isthereanydeal.specials('giveaway'), 'Giveaways'))
 
     else:
@@ -172,27 +172,27 @@ async def wh(ctx, command: typing.Optional[str], amount: typing.Optional[int] = 
         for img in wallhaven.featured():
             await ctx.send(embed=wh_embed(img))
 
-    elif command == 'relevant':
+    elif command.lower() == 'p':
         for img in wallhaven.relevance(query)[:amount]:
             await ctx.send(embed=wh_embed(img))
 
-    elif command == 'random':
+    elif command.lower() == 'r':
         for img in wallhaven.random(query)[:amount]:
             await ctx.send(embed=wh_embed(img))
 
-    elif command == 'latest':
+    elif command.lower() == 'l':
         for img in wallhaven.date_added(query)[:amount]:
             await ctx.send(embed=wh_embed(img))
 
-    elif command == 'views':
+    elif command.lower() == 'v':
         for img in wallhaven.views(query)[:amount]:
             await ctx.send(embed=wh_embed(img))
 
-    elif command == 'favorites':
+    elif command.lower() == 'f':
         for img in wallhaven.favorites(query)[:amount]:
             await ctx.send(embed=wh_embed(img))
 
-    elif command == 'top':
+    elif command.lower() == 't':
         for img in wallhaven.toplist(query)[:amount]:
             await ctx.send(embed=wh_embed(img))
 
@@ -215,34 +215,24 @@ async def wp_error(ctx, error):
 
 
 # todo change env variable to a saved channel id in database
-async def check_new_bundles_specials_db(db, delay):
-    await bot.wait_until_ready()
-    print('Starting check_new_bundles_specials_db')
-
-    while not bot.is_closed():
-        print('Running check_new_bundles_specials_db')
-        lis = isthereanydeal.check_new_bundles_specials_db(database)
-        if lis:
-            await bot.get_channel(int(os.getenv('CHANNEL_ITAD'))).send(embed=itad_embed(lis))
-        await asyncio.sleep(delay)
+@tasks.loop(hours=check_new_bundles_specials_db_hours)
+async def check_new_bundles_specials_db():
+    print('Running check_new_bundles_specials_db')
+    lis = isthereanydeal.check_new_bundles_specials_db(database)
+    if lis:
+        await bot.get_channel(int(os.getenv('CHANNEL_ITAD'))).send(embed=itad_embed(lis))
 
 
-async def bot_change_presence(delay):
-    await bot.wait_until_ready()
-    print('Starting bot_change_presence')
-
-    while not bot.is_closed():
-        print('Running bot_change_presence')
-        len = len(bot.guilds)
-        msg = 'servers' if len > 1 else 'server'
-        await bot.change_presence(activity=discord.Game('on {} {}'.format(len, msg)))
-        await asyncio.sleep(delay)
+@tasks.loop(minutes=bot_change_presence_minutes)
+async def bot_change_presence():
+    print('Running bot_change_presence')
+    len = len(bot.guilds)
+    msg = 'servers' if len > 1 else 'server'
+    await bot.change_presence(activity=discord.Game('on {} {}'.format(len, msg)))
 
 
 def print_out(ctx):
     print('[{0.message.created_at}] {0.author}: {0.message.content}'.format(ctx))
 
 
-bot.loop.create_task(check_new_bundles_specials_db(database, check_new_bundles_specials_db_delay))
-bot.loop.create_task(bot_change_presence(bot_change_presence_delay))
 bot.run(os.getenv('DISCORD_TOKEN'))
