@@ -11,7 +11,6 @@ import wallhaven
 cmdlist = (
     ('.help', 'Shows this message, optional parameters [amount] [query]', False),
     ('.ping', 'Shows bot latency', False),
-    ('.clear [amount]', 'Owner only: Clears newest channel messages', False),
     ('-', isthereanydeal.home_url, False),
     ('.itad', 'Shows bundles and special deals', True),
     ('.itad giveaway', 'Shows giveaways', True),
@@ -64,6 +63,14 @@ async def help(ctx):
 async def clear(ctx, amount: typing.Optional[int] = 100):
     print_out(ctx)
     await ctx.channel.purge(limit=amount)
+
+
+@bot.command()
+@commands.is_owner()
+async def logout(ctx):
+    print_out(ctx)
+    await ctx.send("I'll be back.")
+    await bot.logout()
 
 
 @bot.command()
@@ -226,7 +233,9 @@ async def bot_change_presence(delay):
 
     while not bot.is_closed():
         print('Running bot_change_presence')
-        await bot.change_presence(activity=discord.Game('on {} server'.format(len(bot.guilds))))
+        len = len(bot.guilds)
+        msg = 'servers' if len > 1 else 'server'
+        await bot.change_presence(activity=discord.Game('on {} {}'.format(len, msg)))
         await asyncio.sleep(delay)
 
 
