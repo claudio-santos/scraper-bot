@@ -2,7 +2,7 @@
 
 Discord bot that uses beautifulsoup4 to scrape web pages.
 
-Scrapes isthereanydeal, howlongtobeat, wallhaven, nasa.
+Scrapes isthereanydeal, howlongtobeat, wallhaven, nasa, ggdeals.
 
 Needs .env
 DISCORD_TOKEN=
