@@ -1,11 +1,12 @@
 from bs4 import BeautifulSoup
 import requests
+from discord import Embed
 
 home_url = 'https://howlongtobeat.com/'
 search_url = 'https://howlongtobeat.com/search_results.php'
 
 
-def search_game(game):
+def search_game(game) -> Embed:
     req = requests.post(search_url, data={
         'queryString': game,
         't': 'games',
@@ -18,16 +19,17 @@ def search_game(game):
         'detail': '0'
     })
     if req.status_code != 200:
-        return
+        return Embed(description='Error: ' + req.status_code)
 
-    print(req.url)
     soup = BeautifulSoup(req.text, 'html.parser').find('li', 'back_darkish')
+    if not soup:
+        return Embed(description='Error: Empty Soup')
 
-    img_url = soup.find('img')['src']
+    _img_url = soup.find('img')['src']
 
     aux = soup.find('h3', 'shadow_text').find('a')
-    url = '{}{}'.format(home_url, aux['href'])
-    title = aux.text
+    _url = home_url + aux['href']
+    _title = aux.text
 
     labels = []
     for text in soup.find_all('div', 'shadow_text'):
@@ -37,10 +39,18 @@ def search_game(game):
     for time in soup.find_all('div', 'time_100'):
         times.append(time.text)
 
-    return {
-        'img_url': img_url,
-        'title': title,
-        'url': url,
-        'labels': labels,
-        'times': times
-    }
+    embed = Embed(
+        title=_title,
+        url=_url
+    ).set_thumbnail(
+        url=_img_url
+    )
+
+    for i in range(len(labels)):
+        embed.add_field(
+            name=labels[i],
+            value=times[i] if len(times) > i else '-',
+            inline=True
+        )
+
+    return embed

@@ -5,9 +5,10 @@ import discord
 from discord.ext import commands
 import asyncio
 import isthereanydeal
+import ggdeals
 import howlongtobeat
 import wallhaven
-import nasa as nasa_py
+import nasa as nasapy
 
 load_dotenv()
 
@@ -16,10 +17,13 @@ cmdlist = (
     ('.ping', 'Shows bot latency', False),
     ('-', isthereanydeal.home_url, False),
     ('.itad', 'Shows bundles and special deals', True),
-    ('.itad giveaway', 'Shows giveaways', True),
+    ('.itad free', 'Shows giveaways', True),
     ('.itad [game]', 'Shows game information and deals', True),
+    ('-', ggdeals.home_url, False),
+    ('.ggd', 'Shows best deals', True),
+    ('.ggd free', 'Shows freebies', True),
     ('-', howlongtobeat.home_url, False),
-    ('.hltb [game]', 'Gives game completion times', False),
+    ('.hltb [game]', 'Gives game completion times', True),
     ('-', wallhaven.home_url, False),
     ('.wh', 'Gets featured wallpapers', False),
     ('.wh p [amount] [query]', 'Gets __p__ertinent wallpaper(s)', True),
@@ -28,11 +32,12 @@ cmdlist = (
     ('.wh v [amount] [query]', 'Gets most __v__iewed wallpaper(s)', True),
     ('.wh f [amount] [query]', 'Gets most __f__avored wallpaper(s)', True),
     ('.wh t [amount] [query]', 'Gets __t__op wallpaper(s)', True),
-    ('-', nasa_py.home_url, False),
+    ('-', nasapy.home_url, False),
     ('.nasa [date]', '(date as YYYY-MM-DD) Gets Astronomy Picture of the Day from NASA', False)
 )
 
 error_command_unknown = "I couldn't understand the command."
+error_command_fail = "The command didn't work."
 
 discord_token = os.getenv('DISCORD_TOKEN')
 nasa_api_key = os.getenv('NASA_API_KEY')
@@ -100,79 +105,20 @@ async def itad(ctx, *, command: typing.Optional[str]):
     print_out(ctx)
 
     if not command:
-        await ctx.send(embed=itad_embed(isthereanydeal.bundles_specials()))
+        await ctx.send(embed=isthereanydeal.bundles_specials())
 
-    elif command.lower() == 'giveaway':
-        await ctx.send(embed=itad_embed_giveaway(isthereanydeal.specials('giveaway'), 'Giveaways'))
+    elif command.lower() == 'free':
+        await ctx.send(embed=isthereanydeal.specials('giveaway'))
 
     elif command:
-        dic = isthereanydeal.search_game(itad_api_key, command, itad_region)
-        if not type(dic) is dict:
-            for x in dic:
-                await ctx.send('.itad {}'.format(x['title']))
+        embed = isthereanydeal.search_game(itad_api_key, command, itad_region)
+        if not embed:
+            await ctx.send(error_command_fail)
         else:
-            await ctx.send(embed=itad_embed_search(dic))
+            await ctx.send(embed=embed)
+
     else:
         await ctx.send(error_command_unknown)
-
-
-def itad_embed(lis):
-    embed = discord.Embed(
-        title='Bundles and Special Deals',
-        url=isthereanydeal.home_url
-    )
-
-    for li in lis:
-        embed.add_field(
-            name=li[0],
-            value='{}\n{} ({}) [details]({})'.format(li[1], li[4], li[3], li[2]),
-            inline=False
-        )
-
-    return embed
-
-
-def itad_embed_giveaway(lis, command):
-    embed = discord.Embed(
-        title='Specials {}'.format(command),
-        url=isthereanydeal.specials_url
-    )
-
-    for li in lis:
-        embed.add_field(
-            name=li[0],
-            value='{}\n{} [details]({})'.format(li[1], li[4], li[2]),
-            inline=True
-        )
-
-    return embed
-
-
-def itad_embed_search(dic):
-    embed = discord.Embed(
-        title=dic['title'],
-        url=dic['url_game']
-    )
-
-    embed.add_field(name='-', value='__Current Prices__', inline=False)
-
-    for x in dic['prices_list']:
-        embed.add_field(
-            name=x['shop']['name'],
-            value='{:.2f} {} ({}% off)\n{}'.format(x['price_new'], dic['currency'], x['price_cut'], x['url']),
-            inline=True
-        )
-
-    embed.add_field(name='-', value='__Historical Low Prices__', inline=False)
-
-    for x in dic['storelow_list']:
-        embed.add_field(
-            name=x['shop'],
-            value='{:.2f} {}'.format(x['price'], dic['currency']),
-            inline=True
-        )
-
-    return embed
 
 
 @itad.error
@@ -181,28 +127,32 @@ async def itad_error(ctx, error):
 
 
 @bot.command()
-async def hltb(ctx, *, game):
+async def ggd(ctx, *, command: typing.Optional[str]):
     print_out(ctx)
 
-    dic = howlongtobeat.search_game(game)
+    if not command:
+        await ctx.send(embed=ggdeals.best_deals())
 
-    embed = discord.Embed(
-        title=dic['title'],
-        url=dic['url']
-    ).set_thumbnail(
-        url=dic['img_url']
-    )
+    elif command.lower() == 'free':
+        await ctx.send(embed=ggdeals.search_freebies())
 
-    labels = dic['labels']
-    times = dic['times']
-    for i in range(len(labels)):
-        embed.add_field(
-            name=labels[i],
-            value=times[i] if len(times) > i else '-',
-            inline=True
-        )
+    else:
+        await ctx.send(error_command_unknown)
 
-    await ctx.send(embed=embed)
+
+@ggd.error
+async def ggd_error(ctx, error):
+    await ctx.send(error)
+
+
+@bot.command()
+async def hltb(ctx, *, game):
+    print_out(ctx)
+    embed = howlongtobeat.search_game(game)
+    if not embed:
+        await ctx.send(error_command_fail)
+    else:
+        await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -210,44 +160,35 @@ async def wh(ctx, command: typing.Optional[str], amount: typing.Optional[int] = 
     print_out(ctx)
 
     if not command:
-        for img in wallhaven.featured():
-            await ctx.send(embed=wh_embed(img))
+        for embed in wallhaven.featured():
+            await ctx.send(embed=embed)
 
     elif command.lower() == 'p':
-        for img in wallhaven.relevance(query)[:amount]:
-            await ctx.send(embed=wh_embed(img))
+        for embed in wallhaven.relevance(query)[:amount]:
+            await ctx.send(embed=embed)
 
     elif command.lower() == 'r':
-        for img in wallhaven.random(query)[:amount]:
-            await ctx.send(embed=wh_embed(img))
+        for embed in wallhaven.random(query)[:amount]:
+            await ctx.send(embed=embed)
 
     elif command.lower() == 'l':
-        for img in wallhaven.date_added(query)[:amount]:
-            await ctx.send(embed=wh_embed(img))
+        for embed in wallhaven.date_added(query)[:amount]:
+            await ctx.send(embed=embed)
 
     elif command.lower() == 'v':
-        for img in wallhaven.views(query)[:amount]:
-            await ctx.send(embed=wh_embed(img))
+        for embed in wallhaven.views(query)[:amount]:
+            await ctx.send(embed=embed)
 
     elif command.lower() == 'f':
-        for img in wallhaven.favorites(query)[:amount]:
-            await ctx.send(embed=wh_embed(img))
+        for embed in wallhaven.favorites(query)[:amount]:
+            await ctx.send(embed=embed)
 
     elif command.lower() == 't':
-        for img in wallhaven.toplist(query)[:amount]:
-            await ctx.send(embed=wh_embed(img))
+        for embed in wallhaven.toplist(query)[:amount]:
+            await ctx.send(embed=embed)
 
     else:
         await ctx.send(error_command_unknown)
-
-
-def wh_embed(img):
-    return discord.Embed(
-        title=img,
-        url=img
-    ).set_image(
-        url=img
-    )
 
 
 @wh.error
@@ -258,20 +199,7 @@ async def wp_error(ctx, error):
 @bot.command()
 async def nasa(ctx, *, date: typing.Optional[str]):
     print_out(ctx)
-    j = nasa_py.get_apod(nasa_api_key, date)
-    await ctx.send(embed=get_nasa_apod_embed(j))
-
-
-def get_nasa_apod_embed(j):
-    return discord.Embed(
-        title=j['title'],
-        description=j['explanation'],
-        url=j['url']
-    ).set_image(
-        url=j['hdurl']
-    ).set_footer(
-        text='{} | {}'.format(j['date'], j['copyright'])
-    )
+    await ctx.send(embed=nasapy.get_apod(nasa_api_key, date))
 
 
 @nasa.error
