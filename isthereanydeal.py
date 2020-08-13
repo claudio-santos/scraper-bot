@@ -114,7 +114,7 @@ def search_game(api_key, game, region) -> Embed:
         for x in j:
             res.append('.itad {}\n'.format(x['title']))
 
-        return Embed().add_field(name='Did you mean:', value=''.join(res))
+        return Embed().add_field(name='Did you mean', value=''.join(res))
 
     plain = j['data']['plain']
 

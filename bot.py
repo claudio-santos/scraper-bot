@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 import asyncio
+import transmission
 import isthereanydeal
 import ggdeals
 import howlongtobeat
@@ -38,6 +39,7 @@ cmdlist = (
 
 error_command_unknown = "I couldn't understand the command."
 error_command_fail = "The command didn't work."
+error_torrent_url = "I need an URL."
 
 discord_token = os.getenv('DISCORD_TOKEN')
 nasa_api_key = os.getenv('NASA_API_KEY')
@@ -83,6 +85,23 @@ async def logout(ctx):
     print_out(ctx)
     await ctx.send("I'll be back.")
     await bot.logout()
+
+
+@bot.command()
+@commands.is_owner()
+async def tor(ctx, url: typing.Optional[str]):
+    print_out(ctx)
+
+    if not url:
+        await ctx.send(embed=transmission.get_torrents())
+
+    else:
+        await ctx.send(embed=transmission.add_torrent(url))
+
+
+@tor.error
+async def tor_error(ctx, error):
+    await ctx.send(error)
 
 
 @bot.command()
@@ -212,7 +231,6 @@ async def bot_change_presence(delay):
     print('Starting bot_change_presence')
 
     while not bot.is_closed():
-        print('Running bot_change_presence')
         size = len(bot.guilds)
         msg = 'servers' if size > 1 else 'server'
         await bot.change_presence(activity=discord.Game('on {} {}'.format(size, msg)))
