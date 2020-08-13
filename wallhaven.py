@@ -10,7 +10,7 @@ img_url = 'https://w.wallhaven.cc/full/{}/wallhaven-{}'
 def featured() -> [Embed]:
     req = requests.get(home_url)
     if req.status_code != 200:
-        return [Embed(description='Error: ' + req.status_code)]
+        return [Embed(description='Error: %d' % req.status_code)]
 
     soup = BeautifulSoup(req.content, 'html.parser')
     res = []

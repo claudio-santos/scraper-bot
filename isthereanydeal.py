@@ -11,7 +11,7 @@ api_url = 'https://itad.docs.apiary.io/#'
 def bundles_specials() -> Embed:
     req = requests.get(home_url)
     if req.status_code != 200:
-        return Embed(description='Error: ' + req.status_code)
+        return Embed(description='Error: %d' % req.status_code)
 
     soup = BeautifulSoup(req.text, 'html.parser')
 
@@ -49,7 +49,7 @@ def bundles_specials() -> Embed:
 def specials(filter_type) -> Embed:
     req = requests.get(specials_url)
     if req.status_code != 200:
-        return Embed(description='Error: ' + req.status_code)
+        return Embed(description='Error: %d' % req.status_code)
 
     soup = BeautifulSoup(req.text, 'html.parser')
 
@@ -94,7 +94,7 @@ def search_game(api_key, game, region) -> Embed:
         'key': api_key, 'title': game
     })
     if req.status_code != 200:
-        return Embed(description='Error: ' + req.status_code)
+        return Embed(description='Error: %d' % req.status_code)
 
     j = json.loads(req.text)
     if not j['.meta']['active']:

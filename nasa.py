@@ -10,7 +10,7 @@ def get_apod(api_key, date) -> Embed:
     date = '' if not date else '&date=' + date
     req = requests.get('https://api.nasa.gov/planetary/apod?api_key=' + api_key + date)
     if req.status_code != 200:
-        return Embed(description='Error: ' + req.status_code)
+        return Embed(description='Error: %d' % req.status_code)
 
     j = json.loads(req.text)
 

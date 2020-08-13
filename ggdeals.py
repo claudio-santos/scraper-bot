@@ -9,7 +9,7 @@ search_url = 'https://gg.deals/news/?availability=1&type=6'
 def best_deals() -> Embed:
     req = requests.get(home_url)
     if req.status_code != 200:
-        return Embed(description='Error: ' + req.status_code)
+        return Embed(description='Error: %d' % req.status_code)
 
     print(req.url)
 
@@ -53,7 +53,7 @@ def best_deals() -> Embed:
 def search_freebies() -> [Embed]:
     req = requests.get(search_url)
     if req.status_code != 200:
-        return Embed(description='Error: ' + req.status_code)
+        return Embed(description='Error: %d' % req.status_code)
 
     print(req.url)
 

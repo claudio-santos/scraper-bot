@@ -19,7 +19,7 @@ def search_game(game) -> Embed:
         'detail': '0'
     })
     if req.status_code != 200:
-        return Embed(description='Error: ' + req.status_code)
+        return Embed(description='Error: %d' % req.status_code)
 
     soup = BeautifulSoup(req.text, 'html.parser').find('li', 'back_darkish')
     if not soup:
