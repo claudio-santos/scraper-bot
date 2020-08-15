@@ -23,6 +23,6 @@ def get_torrents() -> Embed:
 
     n = []
     for t in c.get_torrents():
-        n.append('{}% | {}\n'.format(t.percentDone * 100, t.name))
+        n.append('{}% | {}\n'.format(round(t.percentDone * 100), t.name))
 
     return Embed().add_field(name='Torrent List', value=''.join(n))
