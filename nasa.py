@@ -14,12 +14,27 @@ def get_apod(api_key, date) -> Embed:
 
     j = json.loads(req.text)
 
-    return Embed(
-        title=j['title'],
-        description=j['explanation'],
-        url=j['url']
-    ).set_image(
-        url=j['hdurl']
+    title = j['title']
+    explanation = j['explanation'].replace('||', '|')
+    url = j['url']
+    date = j['date']
+    cr = j['copyright'] if 'copyright' in j else ''
+
+    hdurl = None
+    if j['media_type'] == 'image':
+        hdurl = j['hdurl']
+    else:
+        explanation = '\n'.join([explanation, url])
+
+    embed = Embed(
+        title=title,
+        description=explanation,
+        url=url
     ).set_footer(
-        text='{} | {}'.format(j['date'], j['copyright'])
+        text='{} | {}'.format(date, cr)
     )
+
+    if hdurl:
+        embed.set_image(url=j['hdurl'])
+
+    return embed
