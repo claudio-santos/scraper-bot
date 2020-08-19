@@ -25,4 +25,4 @@ def get_torrents() -> Embed:
     for t in c.get_torrents():
         n.append('{}% | {}\n'.format(round(t.percentDone * 100), t.name))
 
-    return Embed().add_field(name='Torrent List', value=''.join(n))
+    return Embed().add_field(name='Torrent List', value=''.join(n if n else 'None'))
