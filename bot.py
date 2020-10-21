@@ -81,6 +81,16 @@ async def clear(ctx, amount: typing.Optional[int] = 2):
 
 @bot.command()
 @commands.is_owner()
+async def cleardm(ctx, amount: typing.Optional[int] = 2):
+    print_out(ctx)
+    async for message in ctx.channel.history(limit=amount):
+        if message.author.id == bot.user.id:
+            m = await ctx.channel.fetch_message(message.id)
+            await m.delete()
+
+
+@bot.command()
+@commands.is_owner()
 async def logout(ctx):
     print_out(ctx)
     await ctx.send("I'll be back.")
