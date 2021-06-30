@@ -3,21 +3,28 @@ import requests
 from discord import Embed
 
 home_url = 'https://howlongtobeat.com/'
-search_url = 'https://howlongtobeat.com/search_results.php'
+search_url = 'https://howlongtobeat.com/search_results?page=1'
 
 
 def search_game(game) -> Embed:
-    req = requests.post(search_url, data={
-        'queryString': game,
-        't': 'games',
-        'sorthead': 'popular',
-        'sortd': 'Normal Order',
-        'plat': '',
-        'length_type': 'main',
-        'length_min': '',
-        'length_max': '',
-        'detail': '0'
-    })
+    req = requests.post(
+        search_url,
+        data={
+            'queryString': game,
+            't': 'games',
+            'sorthead': 'popular',
+            'sortd': 'Normal Order',
+            'plat': '',
+            'length_type': 'main',
+            'length_min': '',
+            'length_max': '',
+            'detail': '0'
+        },
+        headers={
+            'User-Agent': 'Thunderstorm/1.0 (Linux)',
+            'content-type': 'application/x-www-form-urlencoded'
+        }
+    )
     if req.status_code != 200:
         return Embed(description='Error: %d' % req.status_code)
 
@@ -25,7 +32,7 @@ def search_game(game) -> Embed:
     if not soup:
         return Embed(description='Error: Empty Soup')
 
-    _img_url = soup.find('img')['src']
+    _img_url = home_url[:-1] + soup.find('img')['src']
 
     aux = soup.find('h3', 'shadow_text').find('a')
     _url = home_url + aux['href']

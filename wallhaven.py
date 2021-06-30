@@ -16,6 +16,8 @@ def featured() -> [Embed]:
     res = []
     for finds in soup.find('div', 'feat-row').find_all('img'):
         img = gen_img_url(finds.get('src'))
+        if requests.get(img).status_code == 404:
+            img = img[:-3] + 'png'
         res.append(Embed(
             title=img,
             url=img
