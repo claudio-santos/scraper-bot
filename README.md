@@ -1,5 +1,7 @@
 # scraper-bot
 
+**NOTICE: This project is no longer maintained and has been abandoned.**
+
 Discord bot that uses beautifulsoup4 to scrape web pages.
 
 Scrapes isthereanydeal, howlongtobeat, wallhaven, nasa, ggdeals.
